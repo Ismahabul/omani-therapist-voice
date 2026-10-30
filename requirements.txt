@@ -1,5 +1,9 @@
-fastapi
-uvicorn[standard]
-openai
-python-dotenv
-Jinja2
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+langchain==0.3.14
+langchain-core==0.3.29
+langchain-openai==0.3.1
+openai==1.59.8
+pydantic==2.10.4
+python-dotenv==1.0.1
+Jinja2==3.1.5

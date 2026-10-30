@@ -1,6 +1,6 @@
 import os
+import logging
 from dotenv import load_dotenv
-from openai import AsyncOpenAI  # Use the Asynchronous client
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -8,6 +8,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
+
+# --- Logging Setup ---
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # --- Initial Setup ---
 load_dotenv()
@@ -24,20 +31,23 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Setup templates directory (for index.html)
 templates = Jinja2Templates(directory="templates")
 
-# Initialize Asynchronous OpenAI Client
-# Ensure your OPENAI_API_KEY is set in your .env file
-try:
-    client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-except TypeError:
-    print("ERROR: OpenAI API key not found. Please set it in your .env file.")
-    exit()
+# Initialize LangChain ChatOpenAI Model
+openai_api_key = os.environ.get("OPENAI_API_KEY")
+if not openai_api_key:
+    logger.warning("OPENAI_API_KEY is not set in the environment. Please configure it in your .env file.")
+
+chat_model = ChatOpenAI(
+    model="gpt-4o",
+    temperature=0.7,
+    max_tokens=150,
+    api_key=openai_api_key if openai_api_key else "placeholder"
+)
 
 # --- Pydantic Model for Request Body Validation ---
 class UserInput(BaseModel):
     text: str
 
 # --- Core Prompt Engineering ---
-# This "brain" of the chatbot remains the same.
 SYSTEM_PROMPT = """
 You are 'Elile', a compassionate, empathetic, and culturally-aware AI mental health support companion. 
 Your communication style is exclusively through voice, using the OMANI ARABIC dialect.
@@ -62,10 +72,9 @@ Your communication style is exclusively through voice, using the OMANI ARABIC di
 Now, begin the conversation with the user.
 """
 
-# Store conversation history in memory (for POC only)
-# In production, this should be in a secure, HIPAA-compliant database.
-conversation_history = [
-    {"role": "system", "content": SYSTEM_PROMPT}
+# Store conversation history in memory (for POC only; in production use a persistent store)
+conversation_history: list[BaseMessage] = [
+    SystemMessage(content=SYSTEM_PROMPT)
 ]
 
 
@@ -85,37 +94,34 @@ async def process_audio(user_input: UserInput):
     """
     global conversation_history
     user_text = user_input.text
-    print(f"User said: {user_text}")
+    logger.info(f"User said: {user_text}")
 
     # Add user message to history
-    conversation_history.append({"role": "user", "content": user_text})
+    conversation_history.append(HumanMessage(content=user_text))
 
     # 2. Safety Layer (Simplified Keyword Check for POC)
     CRISIS_KEYWORDS = ["kill myself", "suicide", "end my life", "ما اريد اعيش", "اقتل نفسي"]
     if any(keyword in user_text.lower() for keyword in CRISIS_KEYWORDS):
-        print("CRISIS DETECTED!")
+        logger.warning("CRISIS DETECTED!")
         # IMPORTANT: This must be in Omani Arabic. This is a placeholder.
-        crisis_response_text = "It sounds like you are going through immense pain. It's really important to speak with someone who can help right away. Please call the Oman mental health support line at 1111." # Replace with real number and proper Arabic text
+        crisis_response_text = "It sounds like you are going through immense pain. It's really important to speak with someone who can help right away. Please call the Oman mental health support line at 1111."
         return JSONResponse(content={"reply": crisis_response_text})
 
-    # 3. Dual-Model Response Generation (Simulating GPT-4o with async call)
+    # 3. Dual-Model Response Generation with LangChain ChatOpenAI
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o",  # Primary model
-            messages=conversation_history,
-            temperature=0.7,
-            max_tokens=150
-        )
-        ai_response_text = response.choices[0].message.content
+        response = await chat_model.ainvoke(conversation_history)
+        ai_response_text = response.content
+        if not isinstance(ai_response_text, str):
+            ai_response_text = str(ai_response_text)
 
     except Exception as e:
-        print(f"Error calling OpenAI: {e}")
-        # In production, you would trigger the fallback to Claude here.
+        logger.error(f"Error calling LangChain ChatOpenAI: {e}", exc_info=True)
+        # In production, fallback to secondary model or graceful error response
         ai_response_text = "I'm having a little trouble connecting right now. Let's try again in a moment."
 
     # Add AI response to history
-    conversation_history.append({"role": "assistant", "content": ai_response_text})
-    print(f"Elile replied: {ai_response_text}")
+    conversation_history.append(AIMessage(content=ai_response_text))
+    logger.info(f"Elile replied: {ai_response_text}")
 
     # 4. TTS Output (Sending text back to the client for browser synthesis)
     return JSONResponse(content={"reply": ai_response_text})
