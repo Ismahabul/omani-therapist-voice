@@ -1,26 +1,218 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OMANI-Therapist-Voice</title>
+    <title>إكليل | Elile - Omani Voice AI Companion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        h1 { color: #003366; }
-        p { color: #555; }
-        #recordBtn { background-color: #d9534f; color: white; border: none; padding: 20px; font-size: 18px; border-radius: 50%; width: 100px; height: 100px; cursor: pointer; transition: background-color 0.3s; }
-        #recordBtn.recording { background-color: #5bc0de; }
-        #status { margin-top: 20px; font-size: 1.2em; color: #333; height: 30px; }
+        :root {
+            --primary: #006b5b;
+            --primary-dark: #004d40;
+            --primary-light: #e0f2f1;
+            --accent: #d32f2f;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #e0f2f1 100%);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            background: var(--card-bg);
+            padding: 40px 30px;
+            border-radius: 24px;
+            box-shadow: 0 10px 35px rgba(0, 77, 64, 0.12);
+            transition: all 0.3s ease;
+        }
+
+        .logo-badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .mic-wrapper {
+            position: relative;
+            margin: 20px auto;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #recordBtn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0, 107, 91, 0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            z-index: 2;
+        }
+
+        #recordBtn:hover:not(:disabled) {
+            transform: scale(1.05);
+            background-color: var(--primary-dark);
+        }
+
+        #recordBtn:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #recordBtn.recording {
+            background-color: var(--accent);
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.6);
+            }
+            70% {
+                box-shadow: 0 0 0 22px rgba(211, 47, 47, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(211, 47, 47, 0);
+            }
+        }
+
+        #status {
+            margin-top: 25px;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            min-height: 50px;
+            line-height: 1.6;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #f9fafb;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .disclaimer {
+            margin-top: 25px;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        .crisis-notice {
+            margin-top: 15px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #fef2f2;
+            color: #991b1b;
+            font-size: 0.82rem;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Elile Al Task</h1>
-        <p>Your Voice-Only Mental Health Companion</p>
-        <button id="recordBtn">Press to Talk</button>
-        <div id="status">Press the button and start speaking.</div>
+        <span class="logo-badge">ذكاء اصطناعي باللهجة العُمانية</span>
+        <h1>إكليل (Elile AI)</h1>
+        <p class="subtitle">رفيقك الصوتي للدعم النفسي والاستماع</p>
+        
+        <div class="mic-wrapper">
+            <button id="recordBtn" aria-label="اضغط للتحدث">
+                <span>اضغط وتكلم</span>
+            </button>
+        </div>
+
+        <div id="status">اضغط على الزر وابدأ بالحديث... حياك الله.</div>
+
+        <div id="crisisNotice" class="crisis-notice">
+            إذا كنت في حالة طوارئ أو أزمة، يرجى الاتصال فوراً بخط المساندة النفسية: <strong>24601999</strong> أو الطوارئ: <strong>9999</strong>.
+        </div>
+
+        <div class="controls">
+            <button id="resetBtn" class="btn-secondary" type="button">محادثة جديدة (Reset)</button>
+        </div>
+
+        <div class="disclaimer">
+            * هذا التطبيق تجريبي للمحادثة الصوتية ولا يعتبر بديلاً عن الطبيب النفسي المختص.
+        </div>
     </div>
+
     <script src="/static/script.js"></script>
 </body>
 </html>
