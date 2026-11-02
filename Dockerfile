@@ -26,17 +26,28 @@ RUN pip install --no-cache-dir -r requirements.txt
 # This stage creates the final, lean image for production.
 FROM python:3.11-slim
 
+# Create a non-root user and group
+RUN groupadd -g 1001 appgroup && \
+    useradd -u 1001 -g appgroup -s /bin/bash -m appuser
+
 # Set the working directory
 WORKDIR /app
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy the application source code
-COPY . .
+# Copy the application source code and set ownership
+COPY --chown=appuser:appgroup . .
 
 # Activate the virtual environment for the final container
 ENV PATH="/opt/venv/bin:$PATH"
+
+# Switch to non-root user
+USER appuser
+
+# Container healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Expose the port the app runs on
 EXPOSE 8000
